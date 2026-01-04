@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/database/Dockerfile
+    container_name: postgres
+    environment:
+      POSTGRES_DB: people_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - devsecops-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: backend
+    env_file:
+      - src/backend/.env
+    depends_on:
+      - postgres
+    ports:
+      - "5001:5001"
+    networks:
+      - devsecops-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - devsecops-net
+
+volumes:
+  postgres_data:
+
+networks:
+  devsecops-net:

@@ -1,0 +1,4 @@
+src/backend/.env
+src/backend/__pycache__
+.hintrc
+.venv
