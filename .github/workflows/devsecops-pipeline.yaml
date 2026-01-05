@@ -1,0 +1,129 @@
+name: Full DevSecOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+env:
+  IMAGE_NAME: devsecops-backend
+  REGISTRY: docker.io
+  SEVERITY: CRITICAL
+
+jobs:
+  devsecops:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ---------------------------
+    # Checkout Code
+    # ---------------------------
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    # ---------------------------
+    # Layer 1: Secrets Scanning
+    # ---------------------------
+    - name: Gitleaks - Secrets Scan
+      uses: gitleaks/gitleaks-action@v2
+      with:
+        fail: true
+
+    # ---------------------------
+    # Layer 2: SAST
+    # ---------------------------
+    - name: Semgrep - SAST
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: auto
+
+    # ---------------------------
+    # Layer 3: Dependency Scan (FS)
+    # ---------------------------
+    - name: Trivy - Dependency Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        scan-ref: backend
+        severity: ${{ env.SEVERITY }}
+        exit-code: 1
+        format: json
+        output: trivy-fs.json
+
+    # ---------------------------
+    # Build Docker Image
+    # ---------------------------
+    - name: Build Docker Image
+      run: |
+        docker build -t $REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME:${{ github.sha }} \
+        -f docker/backend/Dockerfile .
+
+    # ---------------------------
+    # Layer 4: Image Scan
+    # ---------------------------
+    - name: Trivy - Image Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        severity: ${{ env.SEVERITY }}
+        exit-code: 1
+        format: json
+        output: trivy-image.json
+
+    # ---------------------------
+    # SBOM Generation
+    # ---------------------------
+    - name: Generate SBOM (Syft)
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+
+    # ---------------------------
+    # Layer 5: Kubernetes Config Scan
+    # ---------------------------
+    - name: Trivy - Kubernetes Config Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: config
+        scan-ref: module-4-kubernetes
+        severity: ${{ env.SEVERITY }}
+        exit-code: 1
+        format: json
+        output: trivy-k8s.json
+
+    # ---------------------------
+    # Push Image
+    # ---------------------------
+    - name: Login to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
+        -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Push Image
+      run: |
+        docker push $REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME:${{ github.sha }}
+
+    # ---------------------------
+    # Upload Security Evidence
+    # ---------------------------
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-audit-reports
+        path: |
+          trivy-fs.json
+          trivy-image.json
+          trivy-k8s.json
+          sbom.spdx.json
+
+    # ---------------------------
+    # Deploy to Kubernetes (ONLY IF CLEAN)
+    # ---------------------------
+    - name: Deploy to Kubernetes
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
+        export KUBECONFIG=$(pwd)/kubeconfig
+        kubectl apply -f module-4-kubernetes/
