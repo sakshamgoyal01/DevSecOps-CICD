@@ -1,11 +1,5 @@
 # 🚀 DevSecOps Platform — End-to-End Secure CI/CD on Kubernetes
 
-![Image](https://www.armosec.io/wp-content/uploads/2022/09/CICD-security-gates-diagram.png)
-
-![Image](https://miro.medium.com/1%2ANgrKbmT4WJlYmw9U0rU6vA.png)
-
-![Image](https://cdn.prod.website-files.com/5ff66329429d880392f6cba2/676ff114bb2339da86ac9cb6_643803c7198182149d2e0713_Defense%2520in%2520Depth%2520Layer.jpeg)
-
 ## 📌 Overview
 
 This repository contains a **production-grade DevSecOps platform** that demonstrates how to **build, secure, scan, and deploy** a cloud-native application using **automated security controls across the entire SDLC**.
