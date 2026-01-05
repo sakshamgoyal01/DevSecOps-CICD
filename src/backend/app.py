@@ -2,7 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from db import get_db_connection
+import os
 
+host = os.getenv("APP_HOST", "127.0.0.1")
+port = int(os.getenv("APP_PORT", 5001))
 load_dotenv()
 
 app = Flask(__name__)
@@ -35,5 +38,6 @@ def get_people():
         {"id": r[0], "name": r[1], "age": r[2]} for r in rows
     ])
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host=host, port=port)

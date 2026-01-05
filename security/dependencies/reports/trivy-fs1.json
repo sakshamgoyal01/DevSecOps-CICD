@@ -1,0 +1,7 @@
+{
+  "SchemaVersion": 2,
+  "ReportID": "019b8d59-799c-7f1b-8b84-7ac5cc4f6eb8",
+  "CreatedAt": "2026-01-05T14:20:09.948991+05:30",
+  "ArtifactName": "docker/frontend",
+  "ArtifactType": "filesystem"
+}

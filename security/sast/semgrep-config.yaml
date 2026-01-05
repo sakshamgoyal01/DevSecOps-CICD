@@ -1,0 +1,7 @@
+rules:
+  - id: no-os-system
+    patterns:
+      - pattern: os.system(...)
+    message: "Use of os.system is not allowed"
+    severity: ERROR
+    languages: [python]
